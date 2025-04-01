@@ -1,0 +1,17 @@
+{
+  "X": {
+      "Doors": 2,
+      "Year": 2017,
+      "Owner_Count": 2,
+      "Brand": "Honda",
+      "Model": "Accord",
+      "Fuel_Type": "Petrol",
+      "Transmission": "Semi-Automatic",
+      "Engine_Size": 4.0,
+      "Mileage": 130322
+  },
+  "y": {
+      "prediction": 11509
+  }
+}
+

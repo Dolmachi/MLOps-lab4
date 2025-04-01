@@ -1,0 +1,15 @@
+services:
+  api:
+    build: .
+    image: travissscottt/api_car_price_3:latest
+    container_name: api_container
+    ports:
+      - "8000:8000"
+    environment:
+      - DOCKER_ENV=true
+
+  mongodb:
+    image: mongo
+    container_name: mongodb_container
+    ports:
+      - "27017:27017"

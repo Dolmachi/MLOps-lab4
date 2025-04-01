@@ -1,0 +1,101 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKERHUB_CREDS = credentials('travissscottt-dockerhub')
+    }
+
+    options {
+        timestamps()
+        skipDefaultCheckout(true)
+    }
+
+    stages {
+
+        stage('Clone Repository') {
+            steps {
+                cleanWs()
+                sh 'git clone -b master https://github.com/Dolmachi/MLOps-lab3.git'
+            }
+        }
+
+        stage('Add Secrets to CI and Run Unit Tests') {
+            steps {
+                dir('MLOps-lab3') {
+                    withCredentials([file(credentialsId: 'vault-key', variable: 'VAULT_KEY')]) {
+                        sh '''
+                            bash -c "
+                                source /home/dolmachi/miniconda3/etc/profile.d/conda.sh &&
+                                conda activate mlops &&
+                                ansible-vault decrypt secrets.yml --vault-password-file $VAULT_KEY &&
+                                pytest src/unit_tests --cov=src --disable-warnings
+                            "
+                        '''
+                    }
+                }
+            }
+        }
+
+        stage('Login to DockerHub') {
+            steps {
+                sh 'docker login -u $DOCKERHUB_CREDS_USR -p $DOCKERHUB_CREDS_PSW'
+            }
+        }
+
+        stage('Build and Run Docker Container') {
+            steps {
+                script {
+                    dir('MLOps-lab3') {
+                        sh 'docker compose build'
+                        sh 'docker compose up -d'
+                    }
+                }
+            }
+        }
+
+        stage('Check Container Logs') {
+            steps {
+                dir("MLOps-lab3") {
+                    sh '''
+                        container_id=$(docker ps -qf "name=api_container")
+                        if [ -z "$container_id" ]; then
+                            echo "No container running"
+                            exit 1
+                        fi
+                        docker logs --tail 1000 "$container_id"
+                    '''
+                }
+            }
+        }
+
+        stage('Push Docker Image to DockerHub') {
+            steps {
+                dir('MLOps-lab3') {
+                    sh '''
+                        image_id=$(docker images -q travissscottt/api_car_price_3:latest)
+                        if [ -z "$image_id" ]; then
+                            echo "Error: Docker image not found. Build might have failed."
+                            exit 1
+                        fi
+                        docker push travissscottt/api_car_price_3:latest
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            sh '''
+                docker stop api_container || true
+                docker rm api_container || true
+                docker stop mongodb_container || true
+                docker rm mongodb_container || true
+                docker rmi travissscottt/api_car_price_3:latest || true
+                docker rmi mongo:5.0 || true
+                docker logout || true
+            '''
+            cleanWs()
+        }
+    }
+}

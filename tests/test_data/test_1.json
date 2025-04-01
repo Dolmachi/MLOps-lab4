@@ -1,0 +1,16 @@
+{
+    "X": {
+        "Doors": 2,
+        "Year": 2014,
+        "Owner_Count": 2,
+        "Brand": "Hyundai",
+        "Model": "Elantra",
+        "Fuel_Type": "Electric",
+        "Transmission": "Semi-Automatic",
+        "Engine_Size": 3.4,
+        "Mileage": 169389
+    },
+    "y": {
+        "prediction": 10789
+    }
+}

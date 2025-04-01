@@ -1,0 +1,14 @@
+fastapi==0.115.11
+numpy==2.2.3
+pandas==2.2.3
+pydantic==2.10.6
+pytest==8.3.4
+PyYAML==6.0.2
+scikit_learn==1.6.1
+seaborn==0.13.2
+optuna==4.2.1
+matplotlib==3.10.0 
+uvicorn==0.32.1
+requests==2.32.3
+pymongo==4.8.0
+mongomock==4.0.0 

@@ -1,0 +1,55 @@
+pipeline {
+    agent any
+
+    options {
+        timestamps()
+        skipDefaultCheckout(true)
+    }
+
+    stages {
+        stage('Clone Repository') {
+            steps {
+                cleanWs()
+                sh 'git clone -b master https://github.com/TravissScottt/MLOps-lab2.git'
+            }
+        }
+        
+        stage('Deploy Using Docker Compose') {
+            steps {
+                dir('MLOps-lab2') {
+                    sh '''
+                        bash -c "docker pull travissscottt/api_car_price_2:latest && docker compose up -d"
+                    '''
+                }
+            }
+        }
+        
+        stage('Wait for App Ready') {
+            steps {
+                sh 'sleep 15'
+            }
+        }
+        
+        stage('Run Functional Tests Inside Container') {
+            steps {
+                sh '''
+                    container_id=$(docker ps -qf "name=api_container")
+                    if [ -z "$container_id" ]; then
+                        echo "No container running"
+                        exit 1
+                    fi
+                    docker exec $container_id pytest -s tests/test_func_api.py
+                '''
+            }
+        }
+    }
+    
+    post {
+        always {
+            sh '''
+                bash -c "docker stop api_container || true; docker rm api_container || true; docker stop mongodb_container || true; docker rm mongodb_container || true; docker rmi travissscottt/api_car_price_2:latest || true; docker rmi mongo:5.0 || true; docker logout || true"
+            '''
+            cleanWs()
+        }
+    }
+}
