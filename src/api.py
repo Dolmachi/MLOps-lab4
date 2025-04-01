@@ -7,12 +7,13 @@ from datetime import datetime
 from confluent_kafka import Producer
 import json
 import yaml
-import uuid  # Добавляем для генерации уникального ID
+import uuid
 
 sys.path.insert(0, os.path.join(os.getcwd(), "src"))
 
 from predict import PipelinePredictor
 from logger import Logger
+
 
 SHOW_LOG = True
 logger = Logger(SHOW_LOG).get_logger(__name__)
@@ -73,14 +74,14 @@ def predict_api(features: CarFeatures):
     try:
         producer.produce(
             kafka_topic,
-            key=message_id,  # Используем сгенерированный ID как ключ
+            key=message_id,
             value=json.dumps(result_data),
             callback=delivery_report
         )
-        producer.flush()  # Убеждаемся, что сообщение отправлено
+        producer.flush()
         logger.info(f"Предсказание отправлено в топик Kafka: {kafka_topic}")
     except Exception as e:
         logger.error("Ошибка отправки сообщения в Kafka", exc_info=True)
-        raise  # Если не удалось отправить в Kafka, возвращаем ошибку
+        raise
 
     return {"prediction": prediction[0]}
