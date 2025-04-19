@@ -44,8 +44,9 @@ services:
 
   consumer:
     build: .
+    image: travissscottt/consumer-image:latest
     container_name: consumer-container
-    command: ["python", "src/messaging/consumer.py"]
+    command: ["python", "src/consumer.py"]
     networks:
       - app-network
     depends_on:
