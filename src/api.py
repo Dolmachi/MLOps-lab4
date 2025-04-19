@@ -1,12 +1,9 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
-import pandas as pd
-import os
-import sys
-
 from predict import PipelinePredictor
-from database import MongoDBConnector
+from pydantic import BaseModel
+from producer import Producer
+from fastapi import FastAPI
 from logger import Logger
+import pandas as pd
 
 class CarFeatures(BaseModel):
     Doors: int
@@ -25,7 +22,7 @@ class CarPriceAPI:
         self.logger = Logger(True).get_logger(__name__)
         self.app = FastAPI()
         self.predictor = PipelinePredictor()
-        self.db = MongoDBConnector().get_database()
+        self.producer = Producer()
         self._register_routes()
 
     def _register_routes(self):
@@ -40,18 +37,14 @@ class CarPriceAPI:
             input_data = pd.DataFrame([features.model_dump()])
             prediction = self.predictor.predict(input_data)[0]
             
-            # Подготовка данных для сохранения в MongoDB
-            result_data = {
+            # Подготовка данных для сохранения в Kafka
+            result = {
                 "input": features.model_dump(),
                 "prediction": prediction
             }
             
-            # Сохраняем результат в коллекцию 'predictions'
-            try:
-                result = self.db.predictions.insert_one(result_data)
-                self.logger.info(f"Prediction saved with id: {result.inserted_id}")
-            except Exception as e: # pragma: no cover
-                self.logger.error("Error saving prediction", exc_info=True)
+            # Отправляем результат в топик kafka 'predictions'
+            self.producer.send(result)
                 
             return {"prediction": prediction}
 
