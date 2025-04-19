@@ -24,7 +24,7 @@ pipeline {
                         sh '''
                             echo "MONGO_USERNAME=$MONGO_USERNAME" > .env
                             echo "MONGO_PASSWORD=$MONGO_PASSWORD" >> .env
-                            docker pull travissscottt/api-image-3:latest
+                            docker pull travissscottt/api-image-4:latest
                             docker-compose up -d
                         '''
                     }
