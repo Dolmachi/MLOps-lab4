@@ -15,23 +15,35 @@ pipeline {
         stage('Clone Repository') {
             steps {
                 cleanWs()
-                sh 'git clone -b master https://github.com/Dolmachi/MLOps-lab3.git'
+                sh 'git clone -b master https://github.com/Dolmachi/MLOps-lab4.git'
             }
         }
 
-        stage('Add Secrets to CI and Run Unit Tests') {
+        stage('Decrypt config_secret.ini') {
             steps {
-                dir('MLOps-lab3') {
-                    withCredentials([file(credentialsId: 'vault-key', variable: 'VAULT_KEY')]) {
+                dir('MLOps-lab4') {
+                    withCredentials([string(credentialsId: 'vault_key', variable: 'VAULT_KEY')]) {
                         sh '''
-                            bash -c "
-                                source /home/dolmachi/miniconda3/etc/profile.d/conda.sh &&
-                                conda activate mlops &&
-                                ansible-vault decrypt secrets.yml --vault-password-file $VAULT_KEY &&
-                                pytest src/unit_tests --cov=src --disable-warnings
-                            "
+                            echo "$VAULT_KEY" > vault-key.txt
+                            ansible-vault decrypt config_secret.ini --vault-password-file vault-key.txt
+                            rm vault-key.txt
                         '''
                     }
+                }
+            }
+        }
+
+        stage('Run Unit Tests') {
+            steps {
+                dir('MLOps-lab4') {
+                    sh '''
+                        bash -c "
+                            python3 -m venv venv &&
+                            . venv/bin/activate &&
+                            pip install -r requirements.txt &&
+                            pytest src/unit_tests --cov=src
+                        "
+                    '''
                 }
             }
         }
@@ -42,22 +54,28 @@ pipeline {
             }
         }
 
-        stage('Build and Run Docker Container') {
+        stage('Build Images and Run Containers') {
             steps {
-                script {
-                    dir('MLOps-lab3') {
-                        sh 'docker compose build'
-                        sh 'docker compose up -d'
+                dir('MLOps-lab4') {
+                    withCredentials([
+                        string(credentialsId: 'mongo-username', variable: 'MONGO_USERNAME'),
+                        string(credentialsId: 'mongo-password', variable: 'MONGO_PASSWORD')
+                    ]) {
+                        sh '''
+                            echo "MONGO_USERNAME=$MONGO_USERNAME" > .env
+                            echo "MONGO_PASSWORD=$MONGO_PASSWORD" >> .env
+                            docker-compose up -d --build
+                        '''
                     }
                 }
             }
         }
-
+        
         stage('Check Container Logs') {
             steps {
-                dir("MLOps-lab3") {
+                dir("MLOps-lab4") {
                     sh '''
-                        container_id=$(docker ps -qf "name=api_container")
+                        container_id=$(docker ps -qf "name=api-container")
                         if [ -z "$container_id" ]; then
                             echo "No container running"
                             exit 1
@@ -70,14 +88,14 @@ pipeline {
 
         stage('Push Docker Image to DockerHub') {
             steps {
-                dir('MLOps-lab3') {
+                dir('MLOps-lab4') {
                     sh '''
-                        image_id=$(docker images -q travissscottt/api_car_price_3:latest)
+                        image_id=$(docker images -q travissscottt/api-image-4:latest)
                         if [ -z "$image_id" ]; then
                             echo "Error: Docker image not found. Build might have failed."
                             exit 1
                         fi
-                        docker push travissscottt/api_car_price_3:latest
+                        docker push travissscottt/api-image-4:latest
                     '''
                 }
             }
@@ -87,12 +105,12 @@ pipeline {
     post {
         always {
             sh '''
-                docker stop api_container || true
-                docker rm api_container || true
-                docker stop mongodb_container || true
-                docker rm mongodb_container || true
-                docker rmi travissscottt/api_car_price_3:latest || true
-                docker rmi mongo:5.0 || true
+                docker stop api-container || true
+                docker rm api-container || true
+                docker stop mongodb-container || true
+                docker rm mongodb-container || true
+                docker rmi travissscottt/api-image-4:latest || true
+                docker rmi mongo || true
                 docker logout || true
             '''
             cleanWs()

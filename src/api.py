@@ -3,45 +3,10 @@ from pydantic import BaseModel
 import pandas as pd
 import os
 import sys
-from datetime import datetime
-from confluent_kafka import Producer
-import json
-import yaml
-import uuid
-
-sys.path.insert(0, os.path.join(os.getcwd(), "src"))
 
 from predict import PipelinePredictor
+from database import MongoDBConnector
 from logger import Logger
-
-
-SHOW_LOG = True
-logger = Logger(SHOW_LOG).get_logger(__name__)
-
-# Загружаем настройки Kafka из secrets.yml
-base_dir = os.path.dirname(__file__)
-secrets_file_path = os.path.join(base_dir, '..', 'secrets.yml')
-with open(secrets_file_path, "r") as file:
-    secrets = yaml.safe_load(file)
-
-# Настройки для Kafka Producer
-kafka_config = {
-    'bootstrap.servers': secrets['kafka']['bootstrap_servers']
-}
-kafka_topic = secrets['kafka']['topic']
-
-# Инициализируем Kafka Producer
-producer = Producer(kafka_config)
-
-def delivery_report(err, msg):
-    """Функция обратного вызова для проверки доставки сообщения."""
-    if err is not None:
-        logger.error(f"Ошибка доставки сообщения: {err}")
-    else:
-        logger.info(f"Сообщение доставлено в {msg.topic()} [раздел {msg.partition()}]")
-
-predictor = PipelinePredictor()
-app = FastAPI()
 
 class CarFeatures(BaseModel):
     Doors: int
@@ -54,34 +19,47 @@ class CarFeatures(BaseModel):
     Engine_Size: float
     Mileage: float
 
-@app.post("/predict")
-def predict_api(features: CarFeatures):
-    # Преобразуем входные данные в DataFrame для предсказания
-    input_data = pd.DataFrame([features.model_dump()])
-    prediction = predictor.predict(input_data)
+class CarPriceAPI:
+    def __init__(self):
+        """Инициализация API и зависимостей"""
+        self.logger = Logger(True).get_logger(__name__)
+        self.app = FastAPI()
+        self.predictor = PipelinePredictor()
+        self.db = MongoDBConnector().get_database()
+        self._register_routes()
 
-    # Подготовка данных для отправки в Kafka
-    result_data = {
-        "input": features.model_dump(),
-        "prediction": prediction[0],
-        "timestamp": datetime.utcnow().isoformat()
-    }
+    def _register_routes(self):
+        """Регистрация маршрутов API"""
+        @self.app.get('/')
+        def health_check():
+            return {'health_check': 'OK'}
 
-    # Генерируем уникальный ID для сообщения
-    message_id = str(uuid.uuid4())
+        @self.app.post("/predict")
+        def predict(features: CarFeatures):
+            # Получаем данные и делаем предсказание
+            input_data = pd.DataFrame([features.model_dump()])
+            prediction = self.predictor.predict(input_data)[0]
+            
+            # Подготовка данных для сохранения в MongoDB
+            result_data = {
+                "input": features.model_dump(),
+                "prediction": prediction
+            }
+            
+            # Сохраняем результат в коллекцию 'predictions'
+            try:
+                result = self.db.predictions.insert_one(result_data)
+                self.logger.info(f"Prediction saved with id: {result.inserted_id}")
+            except Exception as e: # pragma: no cover
+                self.logger.error("Error saving prediction", exc_info=True)
+                
+            return {"prediction": prediction}
 
-    # Отправляем результат в Kafka
-    try:
-        producer.produce(
-            kafka_topic,
-            key=message_id,
-            value=json.dumps(result_data),
-            callback=delivery_report
-        )
-        producer.flush()
-        logger.info(f"Предсказание отправлено в топик Kafka: {kafka_topic}")
-    except Exception as e:
-        logger.error("Ошибка отправки сообщения в Kafka", exc_info=True)
-        raise
+    def get_app(self):
+        """Возвращает экземпляр FastAPI приложения"""
+        return self.app
 
-    return {"prediction": prediction[0]}
+
+# Создаем экземпляр API
+api = CarPriceAPI()
+app = api.get_app()

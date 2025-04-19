@@ -17,7 +17,7 @@ model_params:
   random_state: 42
   verbose: 0
   warm_start: false
-model_path: /home/dolmachi/Projects/ITMO/MLOps/MLOps-lab2/experiments/rand_forest_pipeline.pkl
+model_path: experiments/rand_forest_pipeline.pkl
 test_data_paths:
 - test_0.json
 - test_1.json

@@ -5,6 +5,7 @@ import numpy as np
 import os
 import json
 import pandas as pd
+from logger import Logger
 from sklearn.metrics import r2_score
 from pickle import load
 import shutil
@@ -12,24 +13,16 @@ import sys
 import traceback
 import yaml
 
-from logger import Logger
-
-SHOW_LOG = True
-
-
 class PipelinePredictor():
     def __init__(self) -> None:
         # Создаем объекты логера и конфигуратора
-        logger = Logger(SHOW_LOG)
+        logger = Logger(True)
         self.config = configparser.ConfigParser()
         self.log = logger.get_logger(__name__)
         self.config.read("config.ini")
         
         # Путь к пайплайну
-        if os.getenv("DOCKER_ENV") == "true":
-            self.pipeline_path = "/app/experiments/rand_forest_pipeline.pkl"
-        else:
-            self.pipeline_path = self.config["RAND_FOREST"]["path"]
+        self.pipeline_path = self.config["RAND_FOREST"]["path"]
         
         # Загружаем пайплайн
         try:

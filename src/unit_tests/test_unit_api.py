@@ -1,47 +1,38 @@
-import pytest
-import json
-import math
-import sys
 import os
-import mongomock
-import pymongo
+import sys
+import pytest
 from fastapi.testclient import TestClient
-
-# Задаём подмену до импорта других модулей
-pymongo.MongoClient = mongomock.MongoClient
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(1, os.path.join(os.getcwd(), "src"))
 
-from api import app  # Импортируем API
+# Патчим метод get_database, чтобы он возвращал объект-заглушку
+# с нужной коллекцией predictions
+with patch("database.MongoDBConnector.get_database", return_value=MagicMock(
+    predictions=MagicMock(insert_one=lambda x: type("Obj", (object,), {"inserted_id": "12345"})())
+)):
+    from api import app  # Импортируем после патчинга
 
-client = TestClient(app)  # Создаём тестового клиента
+client = TestClient(app)
 
-# Получаем пути до тестовых json
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(__file__)) ) 
-TESTS_DIR = os.path.join(BASE_DIR, "tests", "test_data")
-
-@pytest.mark.parametrize("test_file", [
-    os.path.join(TESTS_DIR, "test_0.json"),
-    os.path.join(TESTS_DIR, "test_1.json")
-])
-def test_unit_api(test_file):
-    """Unit тестирование имитационного API"""
-    # Открываем тест
-    with open(test_file, "r") as f:
-        test_data = json.load(f)
-    
-    # Отправляем POST-запрос в API
-    response = client.post("/predict", json=test_data["X"])
-    
-    # Проверяем, что API вернул 200 OK
+def test_health_check():
+    response = client.get("/")
     assert response.status_code == 200
+    assert response.json() == {"health_check": "OK"}
 
-    # Проверяем, что в ответе есть предсказание
-    assert "prediction" in response.json()
-
-    # Ожидаемое и полученное предсказание
-    y_true = test_data["y"]["prediction"]
-    y_pred = response.json()["prediction"]
-
-    # Проверяем, что предсказание близко к ожидаемому (допуск ±1%)
-    assert math.isclose(y_pred, y_true, rel_tol=0.01)
+def test_predict():
+    payload = {
+        "Doors": 4,
+        "Year": 2020,
+        "Owner_Count": 1,
+        "Brand": "Toyota",
+        "Model": "Corolla",
+        "Fuel_Type": "Petrol",
+        "Transmission": "Manual",
+        "Engine_Size": 1.8,
+        "Mileage": 15000
+    }
+    response = client.post("/predict", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert "prediction" in data

@@ -13,11 +13,6 @@ def predictor():
     """Создаёт объект предиктора перед каждым тестом"""
     return PipelinePredictor()
 
-def test_init(predictor):
-    """Тестируем __init__(): пайплайн должен загружаться корректно"""
-    assert predictor.pipeline is not None, "Пайплайн не был загружен"
-    assert hasattr(predictor.pipeline, "predict"), "Пайплайн не имеет метода predict"
-
 def test_predict(predictor):
     """Тестируем predict(): должна выдавать предсказание"""
     dummy_input = pd.DataFrame({

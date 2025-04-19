@@ -7,7 +7,6 @@ sys.path.insert(1, os.path.join(os.getcwd(), "src"))
 
 from preprocess import DataMaker
 
-# Инициализируем DataMaker
 data_maker = DataMaker()
 
 def test_get_data():

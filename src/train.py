@@ -1,6 +1,7 @@
 import configparser
 import os
 import pandas as pd
+from logger import Logger
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.compose import ColumnTransformer
 from sklearn.pipeline import Pipeline
@@ -10,16 +11,11 @@ import pickle
 import sys
 import traceback
 
-from logger import Logger
-
-SHOW_LOG = True
-
-
 class ForestPipelineModel():
     def __init__(self) -> None:
         # Создаем объекты логера и конфигуратора,
         # и считываем конфигурацию
-        logger = Logger(SHOW_LOG)
+        logger = Logger(True)
         self.config = configparser.ConfigParser()
         self.log = logger.get_logger(__name__)
         self.config.read("config.ini")
@@ -41,7 +37,7 @@ class ForestPipelineModel():
         self.numeric_columns = ["Engine_Size", "Mileage"]
 
         # Путь для сохранения пайплайна
-        self.pipeline_path = os.path.join(os.getcwd(), "experiments", "rand_forest_pipeline.pkl")
+        self.pipeline_path = os.path.join("experiments", "rand_forest_pipeline.pkl")
 
     def create_pipeline(self, use_config: bool) -> Pipeline:
         """Создание пайплайна на основе RandomForestRegressor"""

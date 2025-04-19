@@ -4,8 +4,10 @@ ENV PYTHONUNBUFFERED 1
 
 WORKDIR /app
 
+EXPOSE 8000
+
 COPY . /app
 
 RUN pip install -r requirements.txt
 
-CMD ["uvicorn", "src.api:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["fastapi", "run", "src/api.py", "--host", "0.0.0.0", "--port", "8000"]

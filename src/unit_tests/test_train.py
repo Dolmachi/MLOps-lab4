@@ -7,7 +7,6 @@ sys.path.insert(1, os.path.join(os.getcwd(), "src"))
 
 from train import ForestPipelineModel
 
-
 @pytest.fixture
 def model():
     """Создаёт объект модели перед каждым тестом"""
