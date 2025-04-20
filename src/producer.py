@@ -15,5 +15,5 @@ class Producer:
         try:
             self.producer.send("predictions", payload)
             self.logger.info("Sent message to Kafka topic 'predictions'")
-        except Exception as e:
+        except Exception as e: # pragma: no cover
             self.logger.error("Error sending to Kafka", exc_info=True)

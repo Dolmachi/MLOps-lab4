@@ -20,7 +20,7 @@ class Consumer:
             try:
                 self.db.predictions.insert_one(msg.value)
                 self.logger.info(f"Saved to MongoDB: {msg.value}")
-            except Exception:
+            except Exception: # pragma: no cover
                 self.logger.error("Error writing to MongoDB", exc_info=True)
 
 

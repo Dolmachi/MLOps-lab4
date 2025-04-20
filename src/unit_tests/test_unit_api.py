@@ -6,21 +6,20 @@ from unittest.mock import MagicMock, patch
 
 sys.path.insert(1, os.path.join(os.getcwd(), "src"))
 
-# Патчим метод get_database, чтобы он возвращал объект-заглушку
-# с нужной коллекцией predictions
-with patch("database.MongoDBConnector.get_database", return_value=MagicMock(
-    predictions=MagicMock(insert_one=lambda x: type("Obj", (object,), {"inserted_id": "12345"})())
-)):
-    from api import app  # Импортируем после патчинга
+# Подменяем KafkaProducer, чтобы Producer.__init__ не выкидывал ошибку NoBrokersAvailable
+with patch("producer.KafkaProducer", return_value=MagicMock()):
+    from api import app  # импортируем приложение уже с патчем
 
 client = TestClient(app)
+
 
 def test_health_check():
     response = client.get("/")
     assert response.status_code == 200
     assert response.json() == {"health_check": "OK"}
 
-def test_predict():
+@patch("api.Producer.send")
+def test_predict(mock_send):
     payload = {
         "Doors": 4,
         "Year": 2020,
