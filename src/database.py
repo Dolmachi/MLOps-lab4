@@ -1,6 +1,5 @@
 import configparser
 import sys
-import os
 from pymongo import MongoClient
 from logger import Logger
 

@@ -6,7 +6,7 @@ services:
     ports:
       - "8000:8000"
     networks:
-    - app-network
+      - app-network
     depends_on:
       - kafka
 
@@ -14,33 +14,10 @@ services:
     image: mongo
     container_name: mongodb-container
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USERNAME}
-      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
+      - MONGO_INITDB_ROOT_USERNAME=dolmachi
+      - MONGO_INITDB_ROOT_PASSWORD=12345
     networks:
       - app-network
-
-  zookeeper:
-    image: bitnami/zookeeper:latest
-    container_name: zookeeper-container
-    environment:
-      - ALLOW_ANONYMOUS_LOGIN=yes
-    networks:
-      - app-network
-
-  kafka:
-    image: bitnami/kafka:latest
-    container_name: kafka-container
-    environment:
-      - KAFKA_BROKER_ID=1
-      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
-      - KAFKA_LISTENERS=PLAINTEXT://:9092
-      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
-      - ALLOW_PLAINTEXT_LISTENER=yes
-      - KAFKA_CREATE_TOPICS=predictions:1:1
-    networks:
-      - app-network
-    depends_on:
-      - zookeeper
 
   consumer:
     build: .
@@ -50,8 +27,28 @@ services:
     networks:
       - app-network
     depends_on:
-      - kafka
       - mongodb
+      - kafka
+
+  zookeeper:
+    image: wurstmeister/zookeeper
+    container_name: zookeeper-container
+    networks:
+      - app-network
+
+  kafka:
+    image: wurstmeister/kafka
+    container_name: kafka-container
+    environment:
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_AUTO_CREATE_TOPICS_ENABLE=true
+      - KAFKA_CREATE_TOPICS=predictions:1:1
+      - KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+    networks:
+      - app-network
+    depends_on:
+      - zookeeper
   
 networks:
   app-network:
