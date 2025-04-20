@@ -90,12 +90,8 @@ pipeline {
             steps {
                 dir('MLOps-lab4') {
                     sh '''
-                        image_id=$(docker images -q travissscottt/api-image-4:latest)
-                        if [ -z "$image_id" ]; then
-                            echo "Error: Docker image not found. Build might have failed."
-                            exit 1
-                        fi
                         docker push travissscottt/api-image-4:latest
+                        docker push travissscottt/consumer-image:latest
                     '''
                 }
             }
@@ -105,12 +101,9 @@ pipeline {
     post {
         always {
             sh '''
-                docker stop api-container || true
-                docker rm api-container || true
-                docker stop mongodb-container || true
-                docker rm mongodb-container || true
-                docker rmi travissscottt/api-image-4:latest || true
-                docker rmi mongo || true
+                docker stop api-container consumer-container mongodb-container kafka-container zookeeper-container || true
+                docker rm api-container consumer-container mongodb-container kafka-container zookeeper-container || true
+                docker rmi travissscottt/api-image-4:latest travissscottt/consumer-image:latest mongo wurstmeister/kafka wurstmeister/zookeeper || true
                 docker logout || true
             '''
             cleanWs()

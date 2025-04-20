@@ -25,6 +25,7 @@ pipeline {
                             echo "MONGO_USERNAME=$MONGO_USERNAME" > .env
                             echo "MONGO_PASSWORD=$MONGO_PASSWORD" >> .env
                             docker pull travissscottt/api-image-4:latest
+                            docker pull travissscottt/consumer-image:latest
                             docker-compose up -d
                         '''
                     }
@@ -65,12 +66,9 @@ pipeline {
     post {
         always {
             sh '''
-                docker stop api-container || true
-                docker rm api-container || true
-                docker stop mongodb-container || true
-                docker rm mongodb-container || true
-                docker rmi travissscottt/api-image-4:latest || true
-                docker rmi mongo || true
+                docker stop api-container consumer-container mongodb-container kafka-container zookeeper-container || true
+                docker rm api-container consumer-container mongodb-container kafka-container zookeeper-container || true
+                docker rmi travissscottt/api-image-4:latest travissscottt/consumer-image:latest mongo wurstmeister/kafka wurstmeister/zookeeper || true
                 docker logout || true
             '''
             cleanWs()
