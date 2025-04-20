@@ -24,6 +24,6 @@ class Consumer:
                 self.logger.error("Error writing to MongoDB", exc_info=True)
 
 
-if __name__ == "__main__":
+if __name__ == "__main__": # pragma: no cover
     consumer = Consumer()
     consumer.run()
