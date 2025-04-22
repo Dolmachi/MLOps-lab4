@@ -14,8 +14,8 @@ services:
     image: mongo
     container_name: mongodb-container
     environment:
-      - MONGO_INITDB_ROOT_USERNAME=dolmachi
-      - MONGO_INITDB_ROOT_PASSWORD=12345
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_PASSWORD}
     networks:
       - app-network
 
